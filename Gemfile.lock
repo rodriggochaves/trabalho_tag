@@ -1,0 +1,15 @@
+GEM
+  remote: http://rubygems.org/
+  specs:
+    distance_measures (0.0.6)
+    k_means (0.0.7)
+      distance_measures
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  k_means (~> 0.0.7)
+
+BUNDLED WITH
+   1.15.1

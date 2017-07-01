@@ -3,6 +3,8 @@ require 'matrix'
 require 'csv'
 require 'bigdecimal'
 require 'bigdecimal/util'
+require 'rubygems'
+require 'k_means'
 
 class Extractor
   PHI = '1'
@@ -59,7 +61,7 @@ class Extractor
     if a.zero?
       return 0
     else
-      b = BigDecimal(a).sqrt(10)
+      b = BigDecimal(a).sqrt(5)
       c = b * (value('-1.0')) / (value('2') * (value(PHI) ** value('2')) ) 
       return value(EULER) ** c
     end
@@ -75,9 +77,49 @@ class Extractor
   def create_laplace_matrix
     diagonal_sqrt = create_matrix 4
     @diagonal.each_with_index do |line, i|
-      diagonal_sqrt[i][i] = BigDecimal(@diagonal[i][i]).sqrt(10)
+      diagonal_sqrt[i][i] = BigDecimal(@diagonal[i][i]).sqrt(5)
     end
     inverse_sqrt = Matrix.rows(diagonal_sqrt).inverse
-    @laplace = inverse_sqrt * Matrix.rows(@affinity) * inverse_sqrt
+    laplace = inverse_sqrt * Matrix.rows(@affinity) * inverse_sqrt
+    @laplace = laplace.to_a
   end
+
+  def eigenvectors
+    reduce_laplace = create_matrix 4
+    @laplace.each_with_index do |l, i|
+      l.each_with_index do |l1, j|
+        reduce_laplace[i][j] = l1.to_f
+      end
+    end
+    laplace = Matrix.rows(reduce_laplace)
+    special_laplace = Matrix::EigenvalueDecomposition.new(laplace)
+    x = special_laplace.eigenvector_matrix.to_a
+    x.each do |line|
+      line.map!{ |e| value(e.to_s)}
+    end
+    @x = x
+  end
+
+  def renormalize
+    @y = create_matrix 4
+    helper = Array.new(4, 0)
+    for i in 0..3
+      for j in 0..3
+        helper[i] += @x[i][j] ** value('2')
+      end
+    end
+    helper.each do |h|
+      h = BigDecimal(h).sqrt(5)
+    end
+    for i in 0..3
+      for j in 0..3
+        @y[i][j] = @x[i][j] / helper[i]
+      end
+    end
+  end
+
+  def kmeans
+    @kmeans = KMeans.new(@y, centroids: 2)
+  end
+
 end
