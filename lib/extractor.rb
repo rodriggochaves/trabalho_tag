@@ -5,7 +5,7 @@ require 'bigdecimal'
 require 'bigdecimal/util'
 
 class Extractor
-  PHI = '0.5'
+  PHI = '1'
   EULER = '2.718281828'
 
   def extract
@@ -32,16 +32,11 @@ class Extractor
         end
       end
     end
-
-    pp @affinity
-
     @affinity.each do |l|
       for j in 0..3
         l[j] = gaussian_kernel(l[j])
       end
     end
-
-    pp @affinity
   end
 
   def create_matrix size
@@ -68,5 +63,21 @@ class Extractor
       c = b * (value('-1.0')) / (value('2') * (value(PHI) ** value('2')) ) 
       return value(EULER) ** c
     end
+  end
+
+  def create_diagonal_matrix
+    @diagonal = create_matrix 4
+    @affinity.each_with_index do |line, i|
+      @diagonal[i][i] = line.inject(0){ |sum, e| sum + e }
+    end
+  end
+
+  def create_laplace_matrix
+    diagonal_sqrt = create_matrix 4
+    @diagonal.each_with_index do |line, i|
+      diagonal_sqrt[i][i] = BigDecimal(@diagonal[i][i]).sqrt(10)
+    end
+    inverse_sqrt = Matrix.rows(diagonal_sqrt).inverse
+    @laplace = inverse_sqrt * Matrix.rows(@affinity) * inverse_sqrt
   end
 end
