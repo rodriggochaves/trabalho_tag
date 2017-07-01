@@ -1,10 +1,9 @@
 require_relative './lib/extractor'
+require_relative './lib/graphic'
+
+label1, label2 = ARGV[0], ARGV[1]
 
 e = Extractor.new
 e.extract
-e.init_affinity_matrix
-e.create_diagonal_matrix
-e.create_laplace_matrix
-e.eigenvectors
-e.renormalize
-e.kmeans
+e.filter_data(label1, label2)
+Graphic.new(e.f_data)

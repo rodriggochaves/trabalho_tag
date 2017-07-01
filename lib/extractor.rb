@@ -6,9 +6,27 @@ require 'bigdecimal/util'
 require 'rubygems'
 require 'k_means'
 
+PHI = '1'
+EULER = '2.718281828'
+
 class Extractor
-  PHI = '1'
-  EULER = '2.718281828'
+  
+  attr_reader :f_data
+
+  def names
+    {
+      'stg': 0,
+      'scg': 1,
+      'str': 2,
+      'lpr': 3,
+      'peg': 4,
+      'uns': 5
+    }
+  end
+
+  def discover_name name
+    self.names[name.to_sym]
+  end
 
   def extract
     options = { col_sep: ';' }
@@ -19,107 +37,20 @@ class Extractor
     end
   end
 
-  def init_affinity_matrix
-    @affinity = self.create_matrix 4
+  def filter_data l1, l2
+    @f_data = []
     @data.each do |line|
-      for i in 0..3
-        sum = 0
-        a = line[i]
-        for j in 0..3
-          if !(i == j)
-            b = line[j]
-            cal = difference(value(a), value(b))
-            @affinity[i][j] += cal
-          end
-        end
-      end
-    end
-    @affinity.each do |l|
-      for j in 0..3
-        l[j] = gaussian_kernel(l[j])
-      end
+      d1 = line[discover_name(l1)]
+      d2 = line[discover_name(l2)]
+      d3 = line[5].downcase.to_sym
+      @f_data << [d1, d2, d3]
     end
   end
 
-  def create_matrix size
+  def create_matrix s1
     matrix = []
-    size.times do
-      matrix << Array.new(4, 0)
-    end
-    matrix
-  end
-
-  def value n
-    BigDecimal.new(n.gsub(",", "."))
-  end
-
-  def difference a, b
-    return (a - b) ** value('2')
-  end
-
-  def gaussian_kernel a
-    if a.zero?
-      return 0
-    else
-      b = BigDecimal(a).sqrt(5)
-      c = b * (value('-1.0')) / (value('2') * (value(PHI) ** value('2')) ) 
-      return value(EULER) ** c
+    s1.times do
+      matrix << Array.new(s1, 0)
     end
   end
-
-  def create_diagonal_matrix
-    @diagonal = create_matrix 4
-    @affinity.each_with_index do |line, i|
-      @diagonal[i][i] = line.inject(0){ |sum, e| sum + e }
-    end
-  end
-
-  def create_laplace_matrix
-    diagonal_sqrt = create_matrix 4
-    @diagonal.each_with_index do |line, i|
-      diagonal_sqrt[i][i] = BigDecimal(@diagonal[i][i]).sqrt(5)
-    end
-    inverse_sqrt = Matrix.rows(diagonal_sqrt).inverse
-    laplace = inverse_sqrt * Matrix.rows(@affinity) * inverse_sqrt
-    @laplace = laplace.to_a
-  end
-
-  def eigenvectors
-    reduce_laplace = create_matrix 4
-    @laplace.each_with_index do |l, i|
-      l.each_with_index do |l1, j|
-        reduce_laplace[i][j] = l1.to_f
-      end
-    end
-    laplace = Matrix.rows(reduce_laplace)
-    special_laplace = Matrix::EigenvalueDecomposition.new(laplace)
-    x = special_laplace.eigenvector_matrix.to_a
-    x.each do |line|
-      line.map!{ |e| value(e.to_s)}
-    end
-    @x = x
-  end
-
-  def renormalize
-    @y = create_matrix 4
-    helper = Array.new(4, 0)
-    for i in 0..3
-      for j in 0..3
-        helper[i] += @x[i][j] ** value('2')
-      end
-    end
-    helper.each do |h|
-      h = BigDecimal(h).sqrt(5)
-    end
-    for i in 0..3
-      for j in 0..3
-        @y[i][j] = @x[i][j] / helper[i]
-      end
-    end
-  end
-
-  def kmeans
-    @kmeans = KMeans.new(@y, centroids: 2)
-  end
-
 end

@@ -2,13 +2,17 @@ GEM
   remote: http://rubygems.org/
   specs:
     distance_measures (0.0.6)
+    gruff (0.7.0)
+      rmagick (~> 2.13, >= 2.13.4)
     k_means (0.0.7)
       distance_measures
+    rmagick (2.16.0)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  gruff
   k_means (~> 0.0.7)
 
 BUNDLED WITH
