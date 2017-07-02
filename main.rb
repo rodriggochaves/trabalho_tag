@@ -7,3 +7,4 @@ e = Extractor.new
 e.extract
 e.filter_data(label1, label2)
 Graphic.new(e.f_data)
+e.c_affinity
