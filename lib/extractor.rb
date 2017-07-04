@@ -16,8 +16,9 @@ class Extractor
     refined_affinity_mt
     diagonal_mt
     laplace_mt
-    round_matrix
     eigenvectors
+    renormalize
+    pp round_matrix(@y, 2)
   end
 
   def extract_data
@@ -93,14 +94,40 @@ class Extractor
     @laplace = laplace.to_a
   end
 
-  def round_matrix
+  def round_matrix matrix, n
     for i in 0..(@laplace.size - 1)
       for j in 0..(@laplace.size - 1)
-        @laplace[i][j] = @laplace[i][j].round(7)
+        matrix[i][j] = matrix[i][j].round(n)
       end
     end
+    return matrix
   end
 
   def eigenvectors
+    reduce_laplace = []
+    @laplace.each_with_index do |l, i|
+      reduce_laplace << Array.new(@laplace.size, 0.to_f)
+      l.each_with_index do |l1, j|
+        reduce_laplace[i][j] = l1.to_f
+      end
+    end
+    laplace = Matrix.rows(reduce_laplace)
+    special_laplace = Matrix::EigenvalueDecomposition.new(laplace)
+    x = special_laplace.eigenvector_matrix.to_a
+    x.each do |line|
+      line.map!{ |e| value(e.to_s)}
+    end
+    @x = x
+  end
+
+  def renormalize
+    @y = []
+    for i in 0..(@x.size - 1)
+      line_sum = @x[i].inject(0){ |sum, e| sum += e ** 2.to_d }.sqrt(2)
+      @y << Array.new(@x.size, 0.to_d)
+      for j in 0..(@x.size - 1)
+        @y[i][j] = @x[i][j] / line_sum
+      end
+    end
   end
 end
