@@ -17,3 +17,5 @@ e.c_diagonals
 e.c_laplaces
 e.c_eigenvectors
 e.c_renormalize
+e.clustering
+# e.simple_clustering

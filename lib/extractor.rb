@@ -164,9 +164,6 @@ class Extractor < Utility
   def c_renormalize 
     @normalized_x = renormalize @eigenvector_x
     @normalized_y = renormalize @eigenvector_y
-
-    pp @normalized_x
-    pp @normalized_y
   end
 
   def renormalize source
@@ -187,5 +184,22 @@ class Extractor < Utility
     end
 
     return y
+  end
+
+  def clustering
+    kmeans_x = KMeans.new(@normalized_x, :centroids => 4)
+    kmeans_y = KMeans.new(@normalized_y, :centroids => 4)
+
+    pp @normalized_x
+    pp kmeans_x
+  end
+
+  def simple_clustering
+    simple = []
+    @data.each do |d|
+      simple << [value(d[0]), value(d[1])]
+    end
+    kmeans_y = KMeans.new(simple, :centroids => 4)
+    pp kmeans_y
   end
 end
