@@ -73,9 +73,6 @@ class Extractor < Utility
         end
       end
     end
-
-    pp @affinity_x
-    pp @affinity_y
   end
 
   def evaluate_cal container, i, j, symb
@@ -128,5 +125,67 @@ class Extractor < Utility
     end
   end
 
-  
+  def c_laplaces
+    @laplace_x = create_laplace_matrix @diagonal_x, @affinity_x
+    @laplace_y = create_laplace_matrix @diagonal_y, @affinity_y
+  end
+
+  def create_laplace_matrix source_d, source_a
+    diagonal_sqrt = create_matrix 4, "value('0')"
+    source_d.each_with_index do |line, i|
+      diagonal_sqrt[i][i] = BigDecimal(source_d[i][i]).sqrt(5)
+    end
+    inverse_sqrt = Matrix.rows(diagonal_sqrt).inverse
+    laplace = inverse_sqrt * Matrix.rows(source_a) * inverse_sqrt
+    return laplace.to_a
+  end
+
+  def c_eigenvectors
+    @eigenvector_x = create_eigenvectors @laplace_x
+    @eigenvector_y = create_eigenvectors @laplace_y
+  end
+
+  def create_eigenvectors source
+    reduce_laplace = create_matrix 4, "value('0')"
+    source.each_with_index do |l, i|
+      l.each_with_index do |l1, j|
+        reduce_laplace[i][j] = l1.to_f
+      end
+    end
+    laplace = Matrix.rows(reduce_laplace)
+    special_laplace = Matrix::EigenvalueDecomposition.new(laplace)
+    x = special_laplace.eigenvector_matrix.to_a
+    x.each do |line|
+      line.map!{ |e| value(e.to_s)}
+    end
+    return x
+  end
+
+  def c_renormalize 
+    @normalized_x = renormalize @eigenvector_x
+    @normalized_y = renormalize @eigenvector_y
+
+    pp @normalized_x
+    pp @normalized_y
+  end
+
+  def renormalize source
+    y = create_matrix 4, "value('0')"
+    helper = Array.new(4, 0)
+    for i in 0..3
+      for j in 0..3
+        helper[i] += source[i][j] ** value('2')
+      end
+    end
+    helper.each do |h|
+      h = BigDecimal(h).sqrt(5)
+    end
+    for i in 0..3
+      for j in 0..3
+        y[i][j] = source[i][j] / helper[i]
+      end
+    end
+
+    return y
+  end
 end

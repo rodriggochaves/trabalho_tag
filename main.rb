@@ -14,3 +14,6 @@ e.filter_data(label1, label2)
 Graphic.new(e.f_data)
 e.c_affinity
 e.c_diagonals
+e.c_laplaces
+e.c_eigenvectors
+e.c_renormalize
