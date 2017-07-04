@@ -6,6 +6,9 @@ GEM
       rmagick (~> 2.13, >= 2.13.4)
     k_means (0.0.7)
       distance_measures
+    kmeans-clusterer (0.11.4)
+      narray (~> 0.6)
+    narray (0.6.1.2)
     rmagick (2.16.0)
 
 PLATFORMS
@@ -14,6 +17,7 @@ PLATFORMS
 DEPENDENCIES
   gruff
   k_means (~> 0.0.7)
+  kmeans-clusterer (~> 0.11.4)
 
 BUNDLED WITH
    1.15.1

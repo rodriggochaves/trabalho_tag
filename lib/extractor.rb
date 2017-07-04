@@ -4,7 +4,7 @@ require 'csv'
 require 'bigdecimal'
 require 'bigdecimal/util'
 require 'rubygems'
-require 'k_means'
+require 'kmeans-clusterer'
 require 'gruff'
 
 class Extractor
@@ -18,12 +18,12 @@ class Extractor
     laplace_mt
     eigenvectors
     renormalize
-    pp round_matrix(@y, 2)
+    clustering
   end
 
   def extract_data
     options = { col_sep: ';' }
-    path = "user_knowledge_data/micro.data"
+    path = "user_knowledge_data/mini.data"
     @data = []
     CSV.foreach(path, options) do |line|
       @data << line
@@ -95,9 +95,9 @@ class Extractor
   end
 
   def round_matrix matrix, n
-    for i in 0..(@laplace.size - 1)
-      for j in 0..(@laplace.size - 1)
-        matrix[i][j] = matrix[i][j].round(n)
+    for i in 0..(matrix.size - 1)
+      for j in 0..(matrix[i].size - 1)
+        matrix[i][j] = matrix[i][j].round(n).to_f
       end
     end
     return matrix
@@ -123,11 +123,33 @@ class Extractor
   def renormalize
     @y = []
     for i in 0..(@x.size - 1)
-      line_sum = @x[i].inject(0){ |sum, e| sum += e ** 2.to_d }.sqrt(2)
-      @y << Array.new(@x.size, 0.to_d)
-      for j in 0..(@x.size - 1)
+      line_sum = 0
+      for k in 0..4
+        line_sum += (@x[i][k] ** 2.to_d).sqrt(2)
+      end
+      @y << Array.new(4, 0.to_d)
+      for j in 0..4
         @y[i][j] = @x[i][j] / line_sum
       end
+    end
+  end
+
+  def clustering
+    centroids = [
+      [-0.29, -0.01, -0.33, 0.16, 0.13],
+      [-0.01, 0.11, -0.01, -0.10, -0.41],
+      [0.00, -0.29, 0.31, 0.08, 0.00],
+      [0.30, 0.17, 0.02, 0.06, 0.23],
+    ]
+    @kmeans = KMeansClusterer.run 4, @y, 
+                                  labels: (1..(@data.size)).to_a, 
+                                  init: centroids,
+                                  runs: 10
+
+    @kmeans.clusters.each do |cluster|
+      puts  cluster.id.to_s + '. ' + 
+            cluster.points.map(&:label).join(", ") + "\t" +
+            cluster.centroid.to_s + "\n"
     end
   end
 end
