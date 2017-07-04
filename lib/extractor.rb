@@ -53,23 +53,28 @@ class Extractor < Utility
 
   def c_affinity 
     container = split_data(@f_data)
-    @affinity = create_matrix(4, "[value('0'), value('0')]")
+    @affinity_x = create_matrix(4, "value('0')")
+    @affinity_y = create_matrix(4, "value('0')")
 
-    [:x, :y].each_with_index do |c, k|
-      for i in 0..3
-        for j in 0..3
-          if i != j
-            container[discover_name(i)][:x].each_with_index do |a, t|
-              b = container[discover_name(j)][:x][t]
-              cal = difference(a, b)
-              @affinity[i][j][k] += cal
-            end
-          end
+    for i in 0..3
+      for j in 0..3
+        if i != j
+          evaluate_cal(container, i, j, :x)
+          evaluate_cal(container, i, j, :y)
         end
       end
     end
 
-    pp @affinity
+    pp @affinity_x
+    pp @affinity_y
+  end
+
+  def evaluate_cal container, i, j, symb
+    container[discover_name].each_with_index do |a, t|
+      b = array2[t]
+      cal = difference(a, b)
+      @affinity_x[i][j] += cal
+    end
   end
 
   def create_matrix s1, data
@@ -84,5 +89,12 @@ class Extractor < Utility
     a ||= 0
     b ||= 0
     return (a - b) ** value('2')
+  end
+
+  def print_debug_container
+    container = split_data(@f_data)
+    container.each do |k,v|
+      pp "#{k} contem #{v}"
+    end
   end
 end
