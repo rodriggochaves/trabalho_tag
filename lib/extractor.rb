@@ -65,15 +65,24 @@ class Extractor < Utility
       end
     end
 
+    for i in 0..3
+      for j in 0..3
+        if i != j
+          @affinity_x[i][j] = gaussian_kernel(@affinity_x[i][j])
+          @affinity_y[i][j] = gaussian_kernel(@affinity_y[i][j])
+        end
+      end
+    end
+
     pp @affinity_x
     pp @affinity_y
   end
 
   def evaluate_cal container, i, j, symb
-    container[discover_name].each_with_index do |a, t|
-      b = array2[t]
+    container[discover_name(i)][symb].each_with_index do |a, t|
+      b = container[discover_name(j)][symb][t]
       cal = difference(a, b)
-      @affinity_x[i][j] += cal
+      eval("@affinity_#{symb.to_s}[i][j] += cal")
     end
   end
 
@@ -97,4 +106,27 @@ class Extractor < Utility
       pp "#{k} contem #{v}"
     end
   end
+
+  def gaussian_kernel a
+    if a.zero?
+      return 0
+    else
+      b = BigDecimal(a).sqrt(5)
+      c = b * (value('-1.0')) / (value('2') * (value(PHI) ** value('2')) ) 
+      return value(EULER) ** c
+    end
+  end
+
+  def c_diagonals
+    @diagonal_x = create_matrix 4, "value('0')"
+    @diagonal_y = create_matrix 4, "value('0')"
+    @affinity_x.each_with_index do |line, i|
+      @diagonal_x[i][i] = line.inject(0){ |sum, e| sum + e }
+    end
+    @affinity_y.each_with_index do |line, i|
+      @diagonal_y[i][i] = line.inject(0){ |sum, e| sum + e }
+    end
+  end
+
+  
 end
