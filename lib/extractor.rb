@@ -1,205 +1,106 @@
-require_relative './utility'
+require 'pp'
+require 'matrix'
+require 'csv'
+require 'bigdecimal'
+require 'bigdecimal/util'
+require 'rubygems'
+require 'k_means'
+require 'gruff'
 
-class Extractor < Utility
-  
-  attr_reader :f_data
-
-  def names
-    {
-      'stg': 0,
-      'scg': 1,
-      'str': 2,
-      'lpr': 3,
-      'peg': 4,
-      'uns': 5
-    }
+class Extractor
+  def initialize
+    @phi = value('0,5')
+    extract_data
+    prepare_data
+    raw_affinity_mt
+    refined_affinity_mt
+    diagonal_mt
+    laplace_mt
+    round_matrix
+    eigenvectors
   end
 
-  def user_scores
-    {
-      verylow: 0,
-      low: 1,
-      middle: 2,
-      high: 3,
-    }
-  end
-
-  def discover_index name
-    self.names[name.to_sym]
-  end
-
-  def discover_name i
-    self.user_scores.key(i).to_sym
-  end
-
-  def extract
+  def extract_data
     options = { col_sep: ';' }
-    path = "user_knowledge_data/mini.data"
+    path = "user_knowledge_data/micro.data"
     @data = []
     CSV.foreach(path, options) do |line|
       @data << line
     end
   end
 
-  def filter_data l1, l2
-    @f_data = []
-    @data.each do |line|
-      d1 = line[discover_index(l1)]
-      d2 = line[discover_index(l2)]
-      d3 = line[5].downcase.to_sym
-      @f_data << [d1, d2, d3]
-    end
-  end
-
-  def c_affinity 
-    container = split_data(@f_data)
-    @affinity_x = create_matrix(4, "value('0')")
-    @affinity_y = create_matrix(4, "value('0')")
-
-    for i in 0..3
-      for j in 0..3
-        if i != j
-          evaluate_cal(container, i, j, :x)
-          evaluate_cal(container, i, j, :y)
-        end
+  def prepare_data
+    new_data = []
+    for i in 0..(@data.size - 1)
+      new_data << Array.new(4, value('0'))
+      for j in 0..4
+        new_data[i][j] = value(@data[i][j])
       end
     end
+    @data = new_data
+  end
 
-    for i in 0..3
-      for j in 0..3
-        if i != j
-          @affinity_x[i][j] = gaussian_kernel(@affinity_x[i][j])
-          @affinity_y[i][j] = gaussian_kernel(@affinity_y[i][j])
+  def value word
+    BigDecimal.new(word.gsub(',', '.'))
+  end
+
+  def raw_affinity_mt
+    @affinity = []
+    for i in 0..(@data.size - 1)
+      @affinity << Array.new(@data.size, value('0'))
+      for j in 0..(@data.size - 1)
+        for k in 0..4
+          @affinity[i][j] += (@data[i][k] - @data[j][k]) ** value('2')
         end
       end
     end
   end
 
-  def evaluate_cal container, i, j, symb
-    container[discover_name(i)][symb].each_with_index do |a, t|
-      b = container[discover_name(j)][symb][t]
-      cal = difference(a, b)
-      eval("@affinity_#{symb.to_s}[i][j] += cal")
+  def refined_affinity_mt
+    for i in 0..(@affinity.size - 1)
+      for j in 0..(@affinity.size - 1)
+        if i != j
+          @affinity[i][j] = gausian_kernel(@affinity[i][j])
+        end
+      end
     end
   end
 
-  def create_matrix s1, data
-    matrix = []
-    s1.times do
-      matrix << Array.new(s1, eval(data))
-    end
-    return matrix
+  def gausian_kernel number
+    a = number.sqrt(1)
+    b = (a / (value('2') * @phi) ** 2) * value('-1')
+    return Math::E.to_d ** b
   end
 
-  def difference a, b
-    a ||= 0
-    b ||= 0
-    return (a - b) ** value('2')
-  end
-
-  def print_debug_container
-    container = split_data(@f_data)
-    container.each do |k,v|
-      pp "#{k} contem #{v}"
+  def diagonal_mt
+    @diagonal = []
+    for i in 0..(@affinity.size - 1)
+      @diagonal << Array.new(@affinity.size, 0.to_d)
+      for j in 0..(@affinity.size - 1)
+        @diagonal[i][i] += @affinity[i][j]
+      end
     end
   end
 
-  def gaussian_kernel a
-    if a.zero?
-      return 0
-    else
-      b = BigDecimal(a).sqrt(5)
-      c = b * (value('-1.0')) / (value('2') * (value(PHI) ** value('2')) ) 
-      return value(EULER) ** c
-    end
-  end
-
-  def c_diagonals
-    @diagonal_x = create_matrix 4, "value('0')"
-    @diagonal_y = create_matrix 4, "value('0')"
-    @affinity_x.each_with_index do |line, i|
-      @diagonal_x[i][i] = line.inject(0){ |sum, e| sum + e }
-    end
-    @affinity_y.each_with_index do |line, i|
-      @diagonal_y[i][i] = line.inject(0){ |sum, e| sum + e }
-    end
-  end
-
-  def c_laplaces
-    @laplace_x = create_laplace_matrix @diagonal_x, @affinity_x
-    @laplace_y = create_laplace_matrix @diagonal_y, @affinity_y
-  end
-
-  def create_laplace_matrix source_d, source_a
-    diagonal_sqrt = create_matrix 4, "value('0')"
-    source_d.each_with_index do |line, i|
-      diagonal_sqrt[i][i] = BigDecimal(source_d[i][i]).sqrt(5)
+  def laplace_mt
+    diagonal_sqrt = []
+    @diagonal.each_with_index do |line, i|
+      diagonal_sqrt << Array.new(@diagonal.size, 0.to_d)
+      diagonal_sqrt[i][i] = @diagonal[i][i].sqrt(2)
     end
     inverse_sqrt = Matrix.rows(diagonal_sqrt).inverse
-    laplace = inverse_sqrt * Matrix.rows(source_a) * inverse_sqrt
-    return laplace.to_a
+    laplace = inverse_sqrt * Matrix.rows(@affinity) * inverse_sqrt
+    @laplace = laplace.to_a
   end
 
-  def c_eigenvectors
-    @eigenvector_x = create_eigenvectors @laplace_x
-    @eigenvector_y = create_eigenvectors @laplace_y
-  end
-
-  def create_eigenvectors source
-    reduce_laplace = create_matrix 4, "value('0')"
-    source.each_with_index do |l, i|
-      l.each_with_index do |l1, j|
-        reduce_laplace[i][j] = l1.to_f
+  def round_matrix
+    for i in 0..(@laplace.size - 1)
+      for j in 0..(@laplace.size - 1)
+        @laplace[i][j] = @laplace[i][j].round(7)
       end
     end
-    laplace = Matrix.rows(reduce_laplace)
-    special_laplace = Matrix::EigenvalueDecomposition.new(laplace)
-    x = special_laplace.eigenvector_matrix.to_a
-    x.each do |line|
-      line.map!{ |e| value(e.to_s)}
-    end
-    return x
   end
 
-  def c_renormalize 
-    @normalized_x = renormalize @eigenvector_x
-    @normalized_y = renormalize @eigenvector_y
-  end
-
-  def renormalize source
-    y = create_matrix 4, "value('0')"
-    helper = Array.new(4, 0)
-    for i in 0..3
-      for j in 0..3
-        helper[i] += source[i][j] ** value('2')
-      end
-    end
-    helper.each do |h|
-      h = BigDecimal(h).sqrt(5)
-    end
-    for i in 0..3
-      for j in 0..3
-        y[i][j] = source[i][j] / helper[i]
-      end
-    end
-
-    return y
-  end
-
-  def clustering
-    kmeans_x = KMeans.new(@normalized_x, :centroids => 4)
-    kmeans_y = KMeans.new(@normalized_y, :centroids => 4)
-
-    pp @normalized_x
-    pp kmeans_x
-  end
-
-  def simple_clustering
-    simple = []
-    @data.each do |d|
-      simple << [value(d[0]), value(d[1])]
-    end
-    kmeans_y = KMeans.new(simple, :centroids => 4)
-    pp kmeans_y
+  def eigenvectors
   end
 end
