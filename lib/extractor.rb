@@ -1,4 +1,8 @@
 require_relative './utility'
+#require 'rubygems'
+#require 'k_means'
+require 'bigdecimal'
+require 'bigdecimal/util'
 
 class Extractor < Utility
   
@@ -96,5 +100,20 @@ class Extractor < Utility
     container.each do |k,v|
       pp "#{k} contem #{v}"
     end
+  end
+
+  def testando_kmeans
+    new_matrix = []
+    for i in 0..@data.size do
+        new_matrix << Array.new(5,BigDecimal(0))
+    end
+
+    for i in -1..@data.size do
+      for j in 0..4 do
+        new_matrix[i][j] = BigDecimal.new(new_matrix[i][j].gsub(',','.'))
+      end
+    end
+    pp @data
+    #kmeans = KMeans.new(@data, :centroids => 2)
   end
 end
