@@ -1,4 +1,5 @@
-# Data Set Characteristics:  
+# User Knowledge Modeling Data Set 
+## Data Set Characteristics:  
 
 Number of Instances: 403
 
@@ -6,7 +7,7 @@ Number of Attributes: 5
 
 Missing Values? N/A
 
-# Attribute Information:
+## Attribute Information:
 
 STG (The degree of study time for goal object materails), (input value) 
 
@@ -20,7 +21,7 @@ PEG (The exam performance of user for goal objects) (input value)
 
 UNS (The knowledge level of user) (target value) 
 
-# UNS: 
+## UNS: 
 
 Very Low: 50 
 
