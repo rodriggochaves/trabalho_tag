@@ -9,7 +9,7 @@ require 'gruff'
 
 class Extractor
   def initialize
-    @phi = value('0,5')
+    @phi = value('2')
     extract_data
     prepare_data
     raw_affinity_mt
@@ -23,7 +23,7 @@ class Extractor
 
   def extract_data
     options = { col_sep: ';' }
-    path = "user_knowledge_data/mini.data"
+    path = "user_knowledge_data/traning.data"
     @data = []
     CSV.foreach(path, options) do |line|
       @data << line
@@ -146,10 +146,19 @@ class Extractor
                                   init: centroids,
                                   runs: 10
 
+    # @kmeans.clusters.each do |cluster|
+    #   puts  cluster.id.to_s + '. ' + 
+    #         cluster.points.map(&:label).join(", ") + "\t" +
+    #         cluster.centroid.to_s + "\n"
+    # end
+  end
+
+  def print_clusters
     @kmeans.clusters.each do |cluster|
-      puts  cluster.id.to_s + '. ' + 
-            cluster.points.map(&:label).join(", ") + "\t" +
-            cluster.centroid.to_s + "\n"
+      pp "Cluster ##{cluster.id}:"
+      pp "Grades: [#{cluster.points.map(&:label).join(", ")}]"
+      pp "#{cluster.centroid.to_a.map{ |e| e.to_d.round(3).to_digits.to_s }}"
+      pp ""
     end
   end
 end
